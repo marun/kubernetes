@@ -209,6 +209,10 @@ type Config struct {
 	// Default to 0, means never send GOAWAY. Max is 0.02 to prevent break the apiserver.
 	GoawayChance float64
 
+	// TerminationGoaway indicates that on start of termination GOAWAY frames are sent
+	// immediately (before ShutdownDelayDuration has passed) in order to speed up draining.
+	TerminationGoaway bool
+
 	// MergedResourceConfig indicates which groupVersion enabled and its resources enabled/disabled.
 	// This is composed of genericapiserver defaultAPIResourceConfig and those parsed from flags.
 	// If not specify any in flags, then genericapiserver will only enable defaultAPIResourceConfig.
@@ -756,6 +760,9 @@ func DefaultBuildHandlerChain(apiHandler http.Handler, c *Config) http.Handler {
 		handler = genericfilters.WithProbabilisticGoaway(handler, c.GoawayChance)
 	}
 	handler = genericapifilters.WithAuditAnnotations(handler, c.AuditBackend, c.AuditPolicyChecker)
+	if c.TerminationGoaway {
+		handler = genericfilters.WithTerminationGoaway(handler, c.IsTerminating)
+	}
 	handler = genericapifilters.WithCacheControl(handler)
 	handler = genericfilters.WithPanicRecovery(handler, c.IsTerminating)
 	return handler
